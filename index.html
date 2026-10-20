@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="NEXTAL" />
+<meta name="theme-color" content="#F2F4F8" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-v1-192.png" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232F6FDB'/%3E%3Crect x='22' y='26' width='56' height='50' rx='9' fill='%23fff'/%3E%3Crect x='22' y='26' width='56' height='13' rx='6' fill='%23CFE0FA'/%3E%3Ccircle cx='36' cy='55' r='5' fill='%232F6FDB'/%3E%3Ccircle cx='66' cy='55' r='6' fill='%23FFB020'/%3E%3C/svg%3E" />
+<title>NEXTAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F2F4F8; --card: #FFFFFF; --field: #E7EBF2;
+    --ink: #1B2130; --secondary: rgba(27,33,48,0.58); --tertiary: rgba(27,33,48,0.34); --sep: rgba(27,33,48,0.09);
+    --accent: #2F6FDB; --accent-soft: #E4EDFC; --orange: #FFA51F;
+    --ok: #1B9E8A; --ok-soft: #D7F2EC; --ok-ink: #127A6A;
+    --mid: #E0A800; --mid-soft: #FFF5D6; --mid-ink: #8A6800;
+    --ng: #EF6A2E; --ng-soft: #FFEBE0; --ng-ink: #B4461A;
+    --red: #E5484D;
+    --shadow: 0 1px 2px rgba(20,25,40,0.06);
+    --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
+  body { font-family: 'M PLUS 1p', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; color: var(--ink); font-size: 16px; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+  input, select, textarea, button { font: inherit; }
+  /* iPhoneでキーボードが出ても画面がずれないよう、見えている範囲にぴったり固定する（CLAUDE.md「iPhoneの定石」） */
+  #app { position: fixed; left: 0; right: 0; top: var(--app-top, 0px); height: var(--app-height, 100%); display: flex; flex-direction: column; padding-top: var(--safe-top); max-width: 640px; margin: 0 auto; }
+  .nav { height: 52px; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+  .nav h1 { font-size: 18px; font-weight: 800; letter-spacing: .06em; }
+  .nav .r { position: absolute; right: 8px; top: 6px; border: 0; background: none; color: var(--accent); font-size: 28px; font-weight: 400; width: 44px; height: 40px; cursor: pointer; line-height: 1; }
+  .view { display: none; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 16px 24px; }
+  .view.on { display: block; }
+  .tabbar { flex-shrink: 0; display: flex; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: .5px solid var(--sep); padding-bottom: var(--safe-bottom); }
+  body.keyboard-open .tabbar { display: none; }
+  .tabbar button { flex: 1; border: 0; background: none; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 700; color: var(--tertiary); cursor: pointer; }
+  .tabbar button.on { color: var(--accent); }
+  .tabbar svg { width: 25px; height: 25px; }
+  .sec { font-size: 12.5px; color: var(--secondary); font-weight: 700; margin: 14px 4px 8px; }
+  .sec:first-child { margin-top: 6px; }
+  .note { font-size: 12px; color: var(--secondary); line-height: 1.65; margin: 8px 4px 0; }
+
+  /* 一覧カード */
+  .pl { background: var(--card); border-radius: 18px; padding: 14px 15px; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; }
+  .pl:active { transform: scale(.99); }
+  .pl-top { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .pl-n { font-size: 17px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; padding: 4px 10px; border-radius: 999px; }
+  .b-ok { background: var(--ok); } .b-mid { background: var(--mid); } .b-ng { background: var(--ng); } .b-none { background: var(--tertiary); }
+  .pl-l { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; margin-top: 7px; font-size: 13px; color: var(--secondary); }
+  .pl-l b { font-size: 19px; color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .fb { margin-top: 8px; font-size: 13px; line-height: 1.55; border-radius: 10px; padding: 7px 10px; font-weight: 500; }
+  .fb-ok { background: var(--ok-soft); color: var(--ok-ink); } .fb-mid { background: var(--mid-soft); color: var(--mid-ink); } .fb-ng { background: var(--ng-soft); color: var(--ng-ink); } .fb-none { background: var(--field); color: var(--secondary); }
+  .gauge { position: relative; height: 7px; border-radius: 4px; background: var(--field); margin-top: 11px; }
+  .gauge .band { position: absolute; top: 0; bottom: 0; background: #A9DCD1; border-radius: 4px; }
+  .gauge .pin { position: absolute; top: -4px; width: 4px; height: 15px; margin-left: -2px; background: var(--ink); border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
+  .gauge .pin.ghost { width: 9px; margin-left: -4.5px; background: #fff; border: 2.5px solid var(--ink); box-shadow: none; }
+  .g-lbl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--tertiary); margin-top: 4px; }
+  .empty { text-align: center; padding: 40px 20px 10px; color: var(--secondary); font-size: 14px; line-height: 1.8; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+  .presets button { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .import-bar { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 10px 12px; margin-top: 6px; box-shadow: var(--shadow); font-size: 13px; color: var(--secondary); }
+  .import-bar button { margin-left: auto; flex-shrink: 0; border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; cursor: pointer; }
+
+  /* カレンダー */
+  .calc { background: var(--card); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); }
+  .cal-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .cal-h b { font-size: 16px; font-weight: 800; }
+  .cal-h button { border: 0; background: var(--field); color: var(--accent); width: 38px; height: 34px; border-radius: 10px; font-size: 20px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .wk { text-align: center; font-size: 11px; color: var(--secondary); padding-bottom: 2px; }
+  .wk.we { color: var(--tertiary); }
+  .cd { aspect-ratio: 1 / 1.08; border: 0; background: none; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 6px; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; }
+  .cd.out { visibility: hidden; }
+  .cd.we { color: var(--tertiary); }
+  .cd.past { color: var(--secondary); }
+  .cd.today { box-shadow: inset 0 0 0 2px var(--ink); }
+  .cd:active { background: var(--field); }
+  .cd .evs { display: flex; gap: 2px; margin-top: 4px; flex-wrap: wrap; justify-content: center; max-width: 30px; }
+  .cd .ev { width: 8px; height: 8px; border-radius: 50%; }
+  .cd .ev.plan { background: #fff !important; border: 2px solid; }
+  .lg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--secondary); margin-top: 10px; }
+  .lg i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .ul { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .ul .it { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border-bottom: .5px solid var(--sep); font-size: 14px; cursor: pointer; white-space: nowrap; }
+  .ul .it:last-child { border-bottom: 0; }
+  .ul .d { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ul .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .ul .g { margin-left: auto; font-size: 11.5px; color: var(--secondary); flex-shrink: 0; }
+  .ul .g.plan { color: var(--accent); font-weight: 700; }
+
+  /* 設定 */
+  .list { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .row { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-bottom: .5px solid var(--sep); cursor: pointer; min-height: 52px; }
+  .row:last-child { border-bottom: 0; }
+  .row .t { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; }
+  .row .t small { display: block; font-size: 12px; font-weight: 500; color: var(--secondary); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .chev { color: var(--tertiary); font-size: 18px; }
+  .row.btn { color: var(--accent); font-weight: 700; font-size: 15px; }
+  .steps { counter-reset: s; padding: 4px 14px 12px; }
+  .steps li { list-style: none; position: relative; padding: 9px 0 9px 30px; font-size: 13.5px; line-height: 1.6; border-bottom: .5px solid var(--sep); }
+  .steps li:last-child { border-bottom: 0; }
+  .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 10px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .steps code { background: var(--field); border-radius: 5px; padding: 1px 5px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  #versionLabel { text-align: center; font-size: 12px; color: var(--tertiary); margin: 22px 0 6px; }
+
+  /* シート */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(20,25,40,.32); display: none; z-index: 60; }
+  .sheet-bg.show { display: block; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: var(--kb, 0px); max-width: 640px; margin: 0 auto; max-height: calc(var(--app-height, 100vh) - 30px); overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 10px 16px calc(var(--kb-safe, var(--safe-bottom)) + 18px); z-index: 61; transform: translateY(105%); transition: transform .28s cubic-bezier(.32,.72,0,1); }
+  .sheet.show { transform: translateY(0); }
+  .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--tertiary); margin: 0 auto 12px; }
+  .sheet h2 { font-size: 17px; text-align: center; margin-bottom: 14px; font-weight: 800; }
+  .lbl { font-size: 12.5px; color: var(--secondary); margin: 0 4px 6px; font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1.5px solid var(--sep); border-radius: 999px; padding: 8px 13px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ink); }
+  .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .fld { width: 100%; min-width: 0; border: 0; background: var(--card); border-radius: 12px; padding: 12px 14px; font-size: 16px; color: var(--ink); margin-bottom: 14px; -webkit-appearance: none; display: block; }
+  input[type=date].fld { min-height: 48px; text-align: left; }
+  .every { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 6px; }
+  .every .fld { margin: 0; text-align: center; font-size: 20px; font-weight: 800; }
+  .seg { display: flex; background: var(--field); border-radius: 10px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--secondary); cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+  .hint { font-size: 12px; color: var(--secondary); margin: 0 4px 14px; line-height: 1.6; }
+  .colors { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .colors button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--sep); cursor: pointer; }
+  .colors button.on { box-shadow: 0 0 0 2.5px var(--ink); }
+  .live { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+  .live .t { font-size: 13px; color: var(--secondary); }
+  .live .big { font-size: 24px; font-weight: 800; margin: 2px 0 2px; }
+  .live .big small { font-size: 13px; font-weight: 700; color: var(--secondary); margin-left: 6px; }
+  .primary { width: 100%; border: 0; border-radius: 14px; background: var(--accent); color: #fff; padding: 15px; font-size: 16px; font-weight: 800; cursor: pointer; }
+  .primary:disabled { opacity: .4; }
+  .del { width: 100%; border: 0; background: none; color: var(--red); padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+  .day-ev { display: flex; align-items: center; gap: 9px; background: var(--card); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+  .day-ev .s { font-size: 11.5px; color: var(--secondary); font-weight: 500; }
+  .day-ev button { margin-left: auto; border: 0; background: none; color: var(--red); font-size: 13px; font-weight: 700; padding: 4px 6px; cursor: pointer; }
+  textarea.fld { min-height: 120px; resize: none; font-size: 14px; line-height: 1.5; }
+
+  .toast { position: fixed; left: 50%; top: calc(var(--app-top, 0px) + var(--safe-top) + 58px); transform: translateX(-50%) translateY(-10px); opacity: 0; pointer-events: none; background: #1B2130; color: #fff; border-radius: 12px; padding: 10px 16px; font-size: 14px; z-index: 90; transition: all .25s; width: max-content; max-width: calc(100vw - 32px); line-height: 1.5; display: flex; gap: 12px; align-items: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast button { border: 0; background: rgba(255,255,255,.16); color: #9CC0FF; font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 8px; }
+  .toast button:empty { display: none; }
+  #updateBanner { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 70px); z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: 0; border-radius: 14px; padding: 14px 18px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 28px rgba(0,0,0,.2); cursor: pointer; transform: translateY(200%); transition: transform .35s cubic-bezier(.32,.72,0,1); }
+  #updateBanner.show { transform: translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="nav"><h1 id="navTitle">NEXTAL</h1><button class="r" id="navAdd" aria-label="予定を入れる">＋</button></div>
+  <div class="view on" id="homeView"></div>
+  <div class="view" id="calView"></div>
+  <div class="view" id="setView"></div>
+  <nav class="tabbar">
+    <button data-tab="homeView" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>一覧</button>
+    <button data-tab="calView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="9" cy="15" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15" r="1.6"/></svg>カレンダー</button>
+    <button data-tab="setView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>設定</button>
+  </nav>
+</div>
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"><span></span><button></button></div>
+<input type="file" id="importFile" accept="application/json,.json" style="display:none" />
+
+<script>
+  const APP_VERSION = '1.0.0';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const todayStr = () => ymd(new Date());
+  const WD = ['日', '月', '火', '水', '木', '金', '土'];
+  const md = (s) => { const d = parse(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const mdw = (s) => `${md(s)}（${WD[parse(s).getDay()]}）`;
+  const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const COLORS = ['#E56B9F', '#3FA36B', '#2F6FDB', '#8B6BD6', '#F08A24', '#1BA6B8', '#7A7F8C'];
+  const UNIT_DAYS = { d: 1, w: 7, m: 30 };
+  const UNIT_LABEL = { d: '日', w: '週', m: 'か月' };
+
+  // ---------- IndexedDB ----------
+  const DB_NAME = 'nextal-db', DB_VER = 1;
+  let db = null;
+  function openDB() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DB_NAME, DB_VER);
+      r.onupgradeneeded = () => { const d = r.result; for (const s of ['places', 'visits']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' }); };
+      r.onsuccess = () => { db = r.result; res(db); };
+      r.onerror = () => rej(r.error);
+    });
+  }
+  const tx = (s, m) => db.transaction(s, m).objectStore(s);
+  const getAll = (s) => new Promise((res, rej) => { const r = tx(s, 'readonly').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); });
+  const put = (s, v) => new Promise((res, rej) => { const r = tx(s, 'readwrite').put(v); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+
+  const state = { places: [], visits: [], calMonth: todayStr().slice(0, 7), tab: 'homeView' };
+  async function loadAll() {
+    state.places = (await getAll('places')).filter((p) => !p.deleted).sort((a, b) => (a.order || 0) - (b.order || 0));
+    state.visits = (await getAll('visits')).filter((v) => !v.deleted);
+  }
+  const placeById = (id) => state.places.find((p) => p.id === id);
+  const visitsOf = (pid) => state.visits.filter((v) => v.placeId === pid).sort((a, b) => a.date < b.date ? -1 : 1);
+
+  // ---------- 間隔の計算 ----------
+  // ちょうどいい間隔＝目安の前後2割（最低でも前後1日）
+  function band(p) {
+    const t = p.every * UNIT_DAYS[p.unit];
+    const w = Math.max(1, Math.round(t * 0.2));
+    return { t, lo: t - w, hi: t + w };
+  }
+  function fmtGap(n) {
+    if (n < 14) return `${n}日`;
+    if (n < 120) { const w = Math.floor(n / 7), r = n % 7; return r ? `${w}週${r}日` : `${w}週`; }
+    return `約${Math.round(n / 30.4 * 2) / 2}か月`;
+  }
+  const half = (n) => Math.round(n * 2) / 2;
+  // 差の日数を、その場所の単位に合わせて言う（か月ごとの場所は「約1か月」）
+  const fmtDiff = (p, n) => p.unit === 'm' && n >= 30 ? `約${half(n / 30)}か月` : fmtGap(n);
+  const everyLabel = (p) => `${p.every}${UNIT_LABEL[p.unit]}ごと`;
+  const bandLabel = (p) => {
+    const b = band(p);
+    if (p.unit === 'd' || b.hi < 28) return `${b.lo}〜${b.hi}日`;
+    if (p.unit === 'w') return `${half(b.lo / 7)}〜${half(b.hi / 7)}週`;
+    return `${half(b.lo / 30)}〜${half(b.hi / 30)}か月`;
+  };
+  // ある日付に予定を入れたときの評価
+  function judgeGap(p, gap) {
+    const b = band(p);
+    if (gap < b.lo) return { lv: 'mid', label: '少し短め', msg: `目安（${bandLabel(p)}）より${fmtDiff(p, b.lo - gap)}短め` };
+    if (gap <= b.hi) return { lv: 'ok', label: 'ちょうどいい', msg: `目安（${bandLabel(p)}）の範囲です` };
+    if (gap <= b.t * 1.5) return { lv: 'mid', label: '少し長め', msg: `目安（${bandLabel(p)}）より${fmtDiff(p, gap - b.hi)}長め` };
+    return { lv: 'ng', label: 'あきすぎ', msg: `目安（${bandLabel(p)}）より${fmtDiff(p, gap - b.hi)}長くなります` };
+  }
+  // 場所ごとのいまの状態
+  function status(p, today = todayStr()) {
+    const vs = visitsOf(p.id);
+    const past = vs.filter((v) => v.date <= today), fut = vs.filter((v) => v.date > today);
+    const last = past.length ? past[past.length - 1].date : null;
+    const next = fut.length ? fut[0].date : null;
+    const b = band(p);
+    const s = { p, last, next, b, gaps: [] };
+    for (let i = 1; i < past.length; i++) s.gaps.push(daysBetween(past[i - 1].date, past[i].date));
+    if (next) {
+      s.until = daysBetween(today, next);
+      if (last) { s.gap = daysBetween(last, next); Object.assign(s, judgeGap(p, s.gap)); s.msg = `前回から${fmtGap(s.gap)}。` + (s.lv === 'ok' ? 'いつもどおりの間隔です。' : s.msg + '。'); }
+      else { s.lv = 'ok'; s.label = '予約あり'; s.msg = 'はじめての記録です。'; }
+    } else if (last) {
+      s.since = daysBetween(last, today);
+      s.winFrom = addDays(last, b.lo); s.winTo = addDays(last, b.hi);
+      if (s.since < b.lo) { s.lv = 'none'; s.label = '予約なし'; s.msg = `目安まであと${fmtDiff(p, b.lo - s.since)}。${mdw(s.winFrom)}〜${mdw(s.winTo)}がちょうどいい日です。`; }
+      else if (s.since <= b.hi) { s.lv = 'mid'; s.label = '予約なし'; s.msg = `ちょうどいい時期です。${mdw(s.winTo)}までに行けると、いつもの間隔です。`; }
+      else { s.lv = 'ng'; s.label = '予約なし'; s.msg = `目安を${fmtDiff(p, s.since - b.hi)}すぎています。そろそろ予約を。`; }
+    } else { s.lv = 'none'; s.label = '記録なし'; s.msg = 'まだ記録がありません。カレンダーから取り込むか、＋で予定を入れてください。'; }
+    return s;
+  }
+  // ゲージ：0〜目安の1.6倍を横幅に。帯＝ちょうどいい範囲、針＝いまの経過（予約ありなら白抜きの針＝次の予約）
+  function gaugeHTML(s) {
+    if (!s.last) return '';
+    const max = Math.max(s.b.hi * 1.4, (s.gap || s.since || 0) * 1.05);
+    const pc = (n) => Math.min(100, Math.max(0, n / max * 100));
+    const val = s.next ? s.gap : s.since;
+    return `<div class="gauge"><div class="band" style="left:${pc(s.b.lo)}%;width:${pc(s.b.hi) - pc(s.b.lo)}%"></div><div class="pin${s.next ? ' ghost' : ''}" style="left:${pc(val)}%"></div></div>
+      <div class="g-lbl"><span>前回 ${md(s.last)}</span><span>ちょうどいい ${bandLabel(s.p)}</span></div>`;
+  }
+
+  // ---------- 一覧 ----------
+  const PRESETS = [
+    { name: '美容院', keyword: '美容院', every: 6, unit: 'w' },
+    { name: '整骨院', keyword: '整骨院', every: 2, unit: 'w' },
+    { name: '眼科', keyword: '眼科', every: 3, unit: 'm' },
+    { name: '通院A', keyword: '', every: 4, unit: 'w' },
+  ];
+  function renderHome() {
+    const el = $('#homeView');
+    if (!state.places.length) {
+      el.innerHTML = `<div class="empty">通っている場所を登録しましょう。<br>押すとすぐ追加できます（あとで名前も間隔も変えられます）。
+        <div class="presets">${PRESETS.map((p, i) => `<button data-preset="${i}">＋ ${p.name}（${p.every}${UNIT_LABEL[p.unit]}ごと）</button>`).join('')}<button data-preset="new">＋ ほかの場所</button></div></div>`;
+      return;
+    }
+    const ss = state.places.map((p) => status(p));
+    const need = ss.filter((s) => !s.next).sort((a, b) => ({ ng: 0, mid: 1, none: 2 }[a.lv] - { ng: 0, mid: 1, none: 2 }[b.lv]) || ((b.since || 0) - (a.since || 0)));
+    const have = ss.filter((s) => s.next).sort((a, b) => a.until - b.until);
+    const card = (s) => `<div class="pl" data-place="${s.p.id}">
+      <div class="pl-top"><span class="dot" style="background:${s.p.color}"></span><span class="pl-n">${esc(s.p.name)}</span><span class="badge b-${s.lv}">${s.label}</span></div>
+      ${s.next ? `<div class="pl-l">次は<b>${mdw(s.next)}</b><span>${s.until === 0 ? '今日' : `あと${s.until}日`}</span></div>`
+        : s.last ? `<div class="pl-l">前回から<b>${fmtGap(s.since)}</b><span>／目安 ${everyLabel(s.p)}</span></div>` : ''}
+      ${s.next ? '' : gaugeHTML(s)}
+      <div class="fb fb-${s.lv}">${esc(s.msg)}</div></div>`;
+    let html = '';
+    if (need.length) html += `<div class="sec">予約が入っていないもの</div>` + need.map(card).join('');
+    if (have.length) html += `<div class="sec">予約が入っているもの</div>` + have.map(card).join('');
+    html += `<div class="import-bar"><span>${importedText()}</span><button data-import>カレンダーから取り込む</button></div>`;
+    // まだ足していない定番の場所（最初の数個を登録するまで出す）
+    const rest = PRESETS.map((p, i) => [p, i]).filter(([p]) => !state.places.some((x) => x.name === p.name));
+    if (rest.length && state.places.length < 4) html += `<div class="presets" style="justify-content:flex-start;margin-top:16px">${rest.map(([p, i]) => `<button data-preset="${i}">＋ ${p.name}</button>`).join('')}<button data-preset="new">＋ ほかの場所</button></div>`;
+    el.innerHTML = html;
+  }
+  function importedText() {
+    let t = 0; try { t = Number(localStorage.getItem('nextal.lastImportAt') || 0); } catch (e) {}
+    if (!t) return 'Googleカレンダーの予約をまとめて取り込めます';
+    const d = Math.floor((Date.now() - t) / 86400000);
+    return `前回の取り込み：${d === 0 ? '今日' : d + '日前'}`;
+  }
+
+  // ---------- カレンダー ----------
+  function renderCal() {
+    const el = $('#calView');
+    const [y, m] = state.calMonth.split('-').map(Number);
+    const first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate(), today = todayStr();
+    let cells = WD.map((w, i) => `<div class="wk${i === 0 || i === 6 ? ' we' : ''}">${w}</div>`).join('');
+    for (let i = 0; i < first.getDay(); i++) cells += '<div class="cd out"></div>';
+    const byDate = {};
+    for (const v of state.visits) (byDate[v.date] = byDate[v.date] || []).push(v);
+    for (let d = 1; d <= days; d++) {
+      const s = `${y}-${pad(m)}-${pad(d)}`, w = parse(s).getDay();
+      const evs = (byDate[s] || []).map((v) => { const p = placeById(v.placeId); return p ? `<span class="ev${s > today ? ' plan' : ''}" style="background:${p.color};border-color:${p.color}"></span>` : ''; }).join('');
+      cells += `<button class="cd${w === 0 || w === 6 ? ' we' : ''}${s < today ? ' past' : ''}${s === today ? ' today' : ''}" data-day="${s}">${d}${evs ? `<span class="evs">${evs}</span>` : ''}</button>`;
+    }
+    const monthVisits = state.visits.filter((v) => v.date.slice(0, 7) === state.calMonth && placeById(v.placeId)).sort((a, b) => a.date < b.date ? -1 : 1);
+    const rows = monthVisits.map((v) => {
+      const p = placeById(v.placeId), prev = visitsOf(p.id).filter((x) => x.date < v.date).pop();
+      const g = prev ? `前回から${fmtGap(daysBetween(prev.date, v.date))}` : 'はじめて';
+      return `<div class="it" data-day="${v.date}"><span class="dot" style="background:${p.color}"></span><span class="d">${mdw(v.date)}</span><span class="nm">${esc(p.name)}</span><span class="g${v.date > today ? ' plan' : ''}">${v.date > today ? '予定' : '行った'}・${g}</span></div>`;
+    }).join('');
+    el.innerHTML = `<div class="calc">
+      <div class="cal-h"><button data-cal="-1" aria-label="前の月">‹</button><b>${y}年${m}月</b><button data-cal="1" aria-label="次の月">›</button></div>
+      <div class="grid">${cells}</div>
+      <div class="lg">${state.places.map((p) => `<span><i style="background:${p.color}"></i>${esc(p.name)}</span>`).join('')}<span>● 行った　○ 予定</span></div>
+    </div>
+    <div class="sec">${m}月</div>
+    ${rows ? `<div class="ul">${rows}</div>` : '<div class="note">この月の予定・記録はありません。日付を押すと入れられます。</div>'}`;
+  }
+
+  // ---------- 設定 ----------
+  function renderSet() {
+    const el = $('#setView');
+    el.innerHTML = `
+      <div class="sec">通う場所</div>
+      <div class="list">${state.places.map((p) => `<div class="row" data-edit="${p.id}"><span class="dot" style="background:${p.color}"></span><span class="t">${esc(p.name)}<small>${everyLabel(p)}・カレンダーで「${esc(p.keyword || '（未設定）')}」を探す</small></span><span class="chev">›</span></div>`).join('')}
+        <div class="row btn" data-edit="new">＋ 場所を追加</div></div>
+      <div class="sec">Googleカレンダーから取り込む</div>
+      <div class="list"><div class="row btn" data-import>クリップボードから取り込む</div><div class="row btn" data-paste>貼り付けて取り込む（うまくいかないとき）</div></div>
+      <div class="note">iPhoneのショートカットで予定をコピーしてから押します。タイトルに「探す言葉」が入っている予定だけを取り込み、日付が過ぎたものは「行った」、これからのものは「予定」になります。何度取り込んでも二重になりません。</div>
+      <div class="sec">ショートカットの作り方（最初に1回だけ）</div>
+      <div class="list"><ol class="steps">
+        <li>「ショートカット」アプリで右上の＋を押し、名前を <code>NEXTALに送る</code> にする</li>
+        <li>「カレンダーの予定を検索」を追加。「フィルタを追加」を2回押して <code>開始日 が 過去 365 日</code> と <code>開始日 が 今後 365 日</code> にし、上の「すべて」を「<b>いずれか</b>」に変える（制限はオフ）</li>
+        <li>「繰り返す（各項目）」を追加し、中に「テキスト」を置く。テキストは <code>繰り返し項目の開始日</code>（日付の形式をカスタムで <code>yyyy-MM-dd</code>）、半角スペース、<code>繰り返し項目のタイトル</code></li>
+        <li>繰り返しの下に「テキストを結合」（区切り：改行）、その下に「クリップボードにコピー」</li>
+        <li>最後に「通知を表示」で <code>NEXTALを開いて取り込んでください</code> と出すと便利</li>
+        <li>実行したら NEXTAL を開き、一覧の「カレンダーから取り込む」を押す（「ペーストを許可」を押す）</li>
+      </ol></div>
+      <div class="sec">バックアップ</div>
+      <div class="list"><div class="row btn" id="exportBtn">データを書き出す（バックアップ）</div><div class="row btn" id="importBtn">データを取り込む</div></div>
+      <div class="note">${bkText()}。データはこの端末の中だけにあります。</div>
+      <div id="versionLabel">v${APP_VERSION}</div>`;
+  }
+
+  // ---------- シート ----------
+  function openSheet(html) { $('#sheet').innerHTML = '<div class="grab"></div>' + html; $('#sheetBg').classList.add('show'); requestAnimationFrame(() => $('#sheet').classList.add('show')); }
+  function closeSheet() { $('#sheet').classList.remove('show'); $('#sheetBg').classList.remove('show'); if (document.activeElement) document.activeElement.blur(); }
+  $('#sheetBg').addEventListener('click', closeSheet);
+
+  // 場所の追加・編集
+  function openPlaceSheet(id, preset) {
+    const p = id ? placeById(id) : null;
+    const v = p || Object.assign({ name: '', keyword: '', every: 4, unit: 'w', color: COLORS[state.places.length % COLORS.length] }, preset || {});
+    let unit = v.unit, color = v.color;
+    openSheet(`<h2>${p ? '場所を編集' : '場所を追加'}</h2>
+      <div class="lbl">表示名</div>
+      <input class="fld" id="plLabel" type="text" value="${esc(v.name)}" placeholder="例：美容院、通院A" maxlength="16" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next">
+      <div class="lbl">カレンダーで探す言葉</div>
+      <input class="fld" id="plKey" type="text" value="${esc(v.keyword || '')}" placeholder="例：〇〇整骨院（予定のタイトルの一部）" maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" style="margin-bottom:6px">
+      <div class="hint">Googleカレンダーの予定のタイトルにこの言葉が入っていたら、この場所の予約として取り込みます。「、」で区切ると複数指定できます。</div>
+      <div class="lbl">ちょうどいい間隔</div>
+      <div class="every"><input class="fld" id="plEvery" type="number" inputmode="numeric" min="1" max="99" value="${v.every}" autocomplete="off"><div class="seg" id="plUnit">${['d', 'w', 'm'].map((u) => `<button data-u="${u}" class="${u === unit ? 'on' : ''}">${UNIT_LABEL[u]}</button>`).join('')}</div></div>
+      <div class="hint" id="plBand"></div>
+      <div class="lbl">色</div>
+      <div class="colors" id="plColor">${COLORS.map((c) => `<button data-c="${c}" class="${c === color ? 'on' : ''}" style="background:${c}" aria-label="色"></button>`).join('')}</div>
+      <button class="primary" id="plSave">保存</button>
+      ${p ? '<button class="del" id="plDel">この場所を消す</button>' : ''}`);
+    const sh = $('#sheet');
+    const showBand = () => { const n = Math.max(1, Math.min(99, parseInt($('#plEvery').value, 10) || 1)); $('#plBand').textContent = `${n}${UNIT_LABEL[unit]}ごと → ちょうどいいのは ${bandLabel({ every: n, unit })}（前後2割）`; };
+    showBand();
+    $('#plEvery').addEventListener('input', showBand);
+    $$('#plUnit button', sh).forEach((b) => b.addEventListener('click', () => { unit = b.dataset.u; $$('#plUnit button', sh).forEach((x) => x.classList.toggle('on', x === b)); showBand(); }));
+    $$('#plColor button', sh).forEach((b) => b.addEventListener('click', () => { color = b.dataset.c; $$('#plColor button', sh).forEach((x) => x.classList.toggle('on', x === b)); }));
+    $('#plSave').addEventListener('click', async () => {
+      const name = $('#plLabel').value.trim();
+      if (!name) { toast('表示名を入れてください'); return; }
+      const every = Math.max(1, Math.min(99, parseInt($('#plEvery').value, 10) || 1));
+      const rec = Object.assign({}, p || { id: uid(), order: Date.now() }, { name, keyword: $('#plKey').value.trim(), every, unit, color, updatedAt: Date.now() });
+      await put('places', rec); await loadAll(); closeSheet(); renderAll();
+      toast(p ? '保存しました' : `「${name}」を追加しました`);
+    });
+    if (p) $('#plDel').addEventListener('click', async (e) => {
+      const b = e.currentTarget;
+      if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'もう一度押すと消します（記録も消えます）'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'この場所を消す'; }, 3000); return; }
+      await put('places', Object.assign({}, p, { deleted: true, updatedAt: Date.now() }));
+      for (const vv of visitsOf(p.id)) await put('visits', Object.assign({}, vv, { deleted: true, updatedAt: Date.now() }));
+      await loadAll(); closeSheet(); renderAll(); toast(`「${p.name}」を消しました`);
+    });
+  }
+
+  // 予定を入れる（日付が決まっていれば その日、場所が決まっていれば その場所）
+  function openAddSheet(date, placeId) {
+    if (!state.places.length) { openPlaceSheet(null); return; }
+    let pid = placeId || null;
+    let d = date || null;
+    if (!d && pid) { const s = status(placeById(pid)); d = s.winTo && s.winTo > todayStr() ? s.winFrom > todayStr() ? s.winFrom : todayStr() : addDays(todayStr(), 7); }
+    if (!d) d = addDays(todayStr(), 7);
+    const dayList = state.visits.filter((v) => v.date === d && placeById(v.placeId));
+    openSheet(`<h2 id="adTitle">${dayList.length ? mdw(d) : '予定を入れる'}</h2>
+      ${dayList.map((v) => { const p = placeById(v.placeId); return `<div class="day-ev"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="s">${v.date > todayStr() ? '予定' : '行った'}${v.src === 'cal' ? '・カレンダーから' : ''}</span><button data-delv="${v.id}">消す</button></div>`; }).join('')}
+      <div class="lbl">${dayList.length ? '別の予定を足す' : 'どこ？'}</div>
+      <div class="chips" id="adPlace">${state.places.map((p) => `<button class="chip${p.id === pid ? ' on' : ''}" data-p="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join('')}</div>
+      <div class="lbl">いつ？</div>
+      <input class="fld" type="date" id="adDate" value="${d}">
+      <div class="live" id="adLive"></div>
+      <button class="primary" id="adSave" disabled>予定に入れる</button>`);
+    const sh = $('#sheet');
+    const live = () => {
+      const box = $('#adLive'); const dd = $('#adDate').value;
+      if (!dayList.length) $('#adTitle').textContent = dd ? (dd <= todayStr() ? '行った日を入れる' : '予定を入れる') : '予定を入れる';
+      $('#adSave').disabled = !(pid && dd);
+      $('#adSave').textContent = dd && dd <= todayStr() ? '行ったことにする' : '予定に入れる';
+      if (!pid || !dd) { box.innerHTML = '<div class="t">場所を選ぶと、前回からの間隔が出ます</div>'; return; }
+      const p = placeById(pid);
+      const prev = visitsOf(pid).filter((v) => v.date < dd).pop();
+      if (!prev) { box.innerHTML = `<div class="t">${esc(p.name)}ははじめての記録です</div>`; return; }
+      const gap = daysBetween(prev.date, dd), j = judgeGap(p, gap), b = band(p);
+      const hint = j.lv === 'ok' ? '' : gap > b.hi ? `${mdw(addDays(prev.date, b.hi))}までに入れると、いつもの間隔に戻せます。` : `${mdw(addDays(prev.date, b.lo))}以降にすると、ちょうどよくなります。`;
+      const max = Math.max(b.hi * 1.4, gap * 1.05), pc = (n) => Math.min(100, n / max * 100);
+      box.innerHTML = `<div class="t">前回（${mdw(prev.date)}）から</div><div class="big">${fmtGap(gap)}<small>${gap}日</small></div>
+        <div class="gauge"><div class="band" style="left:${pc(b.lo)}%;width:${pc(b.hi) - pc(b.lo)}%"></div><div class="pin ghost" style="left:${pc(gap)}%"></div></div>
+        <div class="g-lbl"><span>ちょうどいい ${bandLabel(p)}</span><span></span></div>
+        <div class="fb fb-${j.lv}">${j.label}。${j.msg}。${hint}</div>`;
+    };
+    live();
+    $$('#adPlace .chip', sh).forEach((b) => b.addEventListener('click', () => { pid = b.dataset.p; $$('#adPlace .chip', sh).forEach((x) => x.classList.toggle('on', x === b)); live(); }));
+    $('#adDate').addEventListener('change', live); $('#adDate').addEventListener('input', live);
+    $('#adSave').addEventListener('click', async () => {
+      const dd = $('#adDate').value; if (!pid || !dd) return;
+      if (state.visits.some((v) => v.placeId === pid && v.date === dd)) { toast('その日はもう入っています'); return; }
+      const rec = { id: uid(), placeId: pid, date: dd, src: 'hand', updatedAt: Date.now() };
+      await put('visits', rec); await loadAll(); closeSheet(); renderAll();
+      toast(`${placeById(pid).name}を${mdw(dd)}に入れました`, '取り消す', async () => { await put('visits', Object.assign({}, rec, { deleted: true, updatedAt: Date.now() })); await loadAll(); renderAll(); });
+    });
+    $$('[data-delv]', sh).forEach((b) => b.addEventListener('click', async () => {
+      const v = state.visits.find((x) => x.id === b.dataset.delv); if (!v) return;
+      // カレンダーから来たものは「消した」印を残し、次の取り込みで戻ってこないようにする
+      await put('visits', Object.assign({}, v, { deleted: true, updatedAt: Date.now() }));
+      await loadAll(); closeSheet(); renderAll();
+      toast('消しました', '取り消す', async () => { await put('visits', Object.assign({}, v, { deleted: false, updatedAt: Date.now() })); await loadAll(); renderAll(); });
+    }));
+  }
+
+  // ---------- カレンダーから取り込む ----------
+  // 1行に「日付 タイトル」。日付は 2026-10-03 / 2026/10/3 / 2026年10月3日 のどれでも
+  function parseLines(text) {
+    const out = [];
+    for (const line of String(text).split(/\r?\n/)) {
+      const m = line.match(/(\d{4})[-\/年.](\d{1,2})[-\/月.](\d{1,2})日?/);
+      if (!m) continue;
+      const date = `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+      const title = line.slice(m.index + m[0].length).replace(/^[\s\t:：,、|-]+/, '').replace(/^\d{1,2}:\d{2}\s*/, '').trim();
+      out.push({ date, title });
+    }
+    return out;
+  }
+  function matchPlace(title) {
+    const t = title.toLowerCase();
+    for (const p of state.places) {
+      const keys = String(p.keyword || '').split(/[、,，\s]+/).map((k) => k.trim().toLowerCase()).filter(Boolean);
+      if (keys.some((k) => t.includes(k))) return p;
+    }
+    return null;
+  }
+  async function importText(text) {
+    const lines = parseLines(text);
+    if (!lines.length) { toast('予定が見つかりませんでした。ショートカットでコピーしてから押してください'); return; }
+    const from = lines.reduce((a, l) => l.date < a ? l.date : a, lines[0].date), to = lines.reduce((a, l) => l.date > a ? l.date : a, lines[0].date);
+    const found = new Map();   // placeId|date
+    for (const l of lines) { const p = matchPlace(l.title); if (p) found.set(p.id + '|' + l.date, { placeId: p.id, date: l.date }); }
+    const all = await getAll('visits');
+    const key = (v) => v.placeId + '|' + v.date;
+    const existing = new Map(all.map((v) => [key(v), v]));
+    let added = 0, removed = 0;
+    for (const [k, f] of found) {
+      const e = existing.get(k);
+      if (!e) { await put('visits', { id: uid(), placeId: f.placeId, date: f.date, src: 'cal', updatedAt: Date.now() }); added++; }
+      // 手で消したもの（deleted）はそのまま。手で入れたものは「カレンダーにもある」に切り替える
+      else if (!e.deleted && e.src !== 'cal') await put('visits', Object.assign({}, e, { src: 'cal', updatedAt: Date.now() }));
+    }
+    // 取り込んだ範囲の中で、カレンダーから来たのにもう無いもの（予約を消した・日付を変えた）は消す
+    for (const v of all) {
+      if (v.deleted || v.src !== 'cal' || v.date < from || v.date > to) continue;
+      if (!found.has(key(v))) { await put('visits', Object.assign({}, v, { deleted: true, updatedAt: Date.now() })); removed++; }
+    }
+    try { localStorage.setItem('nextal.lastImportAt', String(Date.now())); } catch (e) {}
+    await loadAll(); renderAll();
+    const unmatched = state.places.filter((p) => !p.keyword).length;
+    toast(`取り込みました：${found.size}件（新しく${added}件${removed ? `・なくなった${removed}件` : ''}）` + (unmatched ? '。探す言葉が未設定の場所があります' : ''));
+  }
+  async function importFromClipboard() {
+    try {
+      const t = await navigator.clipboard.readText();
+      await importText(t);
+    } catch (e) { openPasteSheet(); }
+  }
+  function openPasteSheet() {
+    openSheet(`<h2>貼り付けて取り込む</h2>
+      <div class="hint">ショートカットでコピーした内容を、下の欄に長押しで貼り付けてください。</div>
+      <textarea class="fld" id="pasteBox" placeholder="2026-10-03 春日整骨院&#10;2026-11-08 美容院" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+      <button class="primary" id="pasteGo">取り込む</button>`);
+    $('#pasteGo').addEventListener('click', async () => { const t = $('#pasteBox').value; closeSheet(); await importText(t); });
+  }
+
+  // ---------- 操作 ----------
+  function switchTab(id) {
+    state.tab = id;
+    $$('.view').forEach((v) => v.classList.toggle('on', v.id === id));
+    $$('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
+    $('#navTitle').textContent = id === 'calView' ? 'カレンダー' : id === 'setView' ? '設定' : 'NEXTAL';
+    $('#navAdd').style.visibility = id === 'setView' ? 'hidden' : '';
+    $('#' + id).scrollTop = 0;
+  }
+  $('.tabbar').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
+  $('#navAdd').addEventListener('click', () => openAddSheet(state.tab === 'calView' && state.calMonth !== todayStr().slice(0, 7) ? state.calMonth + '-01' : null));
+  document.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-preset],[data-place],[data-day],[data-cal],[data-edit],[data-import],[data-paste],#exportBtn,#importBtn');
+    if (!t || t.closest('#sheet')) return;
+    if (t.dataset.preset) { if (t.dataset.preset === 'new') return openPlaceSheet(null); const pr = PRESETS[+t.dataset.preset]; return openPlaceSheet(null, pr); }
+    if (t.dataset.place) return openAddSheet(null, t.dataset.place);
+    if (t.dataset.day) return openAddSheet(t.dataset.day);
+    if (t.dataset.cal) { const [y, m] = state.calMonth.split('-').map(Number); const d = new Date(y, m - 1 + Number(t.dataset.cal), 1); state.calMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; return renderCal(); }
+    if (t.dataset.edit) return openPlaceSheet(t.dataset.edit === 'new' ? null : t.dataset.edit);
+    if (t.hasAttribute('data-import')) return importFromClipboard();
+    if (t.hasAttribute('data-paste')) return openPasteSheet();
+    if (t.id === 'exportBtn') return exportData();
+    if (t.id === 'importBtn') return $('#importFile').click();
+  });
+  function renderAll() { renderHome(); renderCal(); renderSet(); }
+
+  // ---------- トースト（alert/confirm は使わない） ----------
+  let toastT = 0;
+  function toast(msg, label, fn) {
+    const t = $('#toast'); t.querySelector('span').textContent = msg;
+    const b = t.querySelector('button'); b.textContent = label || ''; b.onclick = fn ? () => { t.classList.remove('show'); fn(); } : null;
+    t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), fn ? 5000 : 2600);
+  }
+
+  // ---------- バックアップ（全アプリ共通の作法） ----------
+  function bkName(app) { const d = new Date(); return `${app}_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`; }
+  // iPhoneの共有シートは、保存できても「キャンセル」と返すことがある。そのときは本人に聞く。
+  function bkAskSaved() {
+    return new Promise((resolve) => {
+      const bg = document.createElement('div');
+      bg.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit';
+      bg.innerHTML = '<div style="width:100%;max-width:330px;background:#fff;color:#1c1c1e;border-radius:18px;padding:20px 20px 12px;box-shadow:0 12px 40px rgba(0,0,0,.2)">' +
+        '<div style="font-size:16px;font-weight:700;margin-bottom:6px">バックアップは保存できましたか？</div>' +
+        '<div style="font-size:14px;line-height:1.6;color:#6e6e73">保存できていれば、バックアップのお知らせを消します。</div>' +
+        '<div style="display:flex;justify-content:flex-end;gap:4px;margin-top:12px">' +
+        '<button data-v="0" style="border:0;background:none;font:inherit;font-size:15px;padding:10px 12px;color:#6e6e73">やめた</button>' +
+        '<button data-v="1" style="border:0;background:none;font:inherit;font-size:15px;font-weight:700;padding:10px 12px;color:#007aff">保存できた</button></div></div>';
+      bg.addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return; bg.remove(); resolve(b.dataset.v === '1'); });
+      document.body.appendChild(bg);
+    });
+  }
+  async function bkSave(app, text) {
+    const name = bkName(app);
+    if (navigator.maxTouchPoints > 0) {
+      try {
+        const file = new File([text], name, { type: 'application/json' });
+        if (navigator.canShare && navigator.share && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return 'ok'; }
+      } catch (e) { if (e && e.name === 'AbortError') return (await bkAskSaved()) ? 'ok' : 'cancel'; }
+    }
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500);
+    return 'ok';
+  }
+  const BK_KEY = 'nextal.lastBackupAt', SCHEMA = 'nextal.v1';
+  function bkText() { let t = 0; try { t = Number(localStorage.getItem(BK_KEY) || 0); } catch (e) {} if (!t) return 'まだ一度もバックアップしていません'; const d = Math.floor((Date.now() - t) / 86400000); return d === 0 ? '前回のバックアップ：今日' : '前回のバックアップから ' + d + '日'; }
+  async function exportData() {
+    const data = { schema: SCHEMA, exportedAt: new Date().toISOString(), places: await getAll('places'), visits: await getAll('visits') };
+    if (await bkSave('NEXTAL', JSON.stringify(data, null, 2)) !== 'ok') return;
+    try { localStorage.setItem(BK_KEY, String(Date.now())); } catch (e) {}
+    renderSet(); toast('書き出しました');
+  }
+  $('#importFile').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (data.schema !== SCHEMA) { toast('NEXTALのデータではないようです'); return; }
+      let n = 0;
+      for (const [store, list] of [['places', data.places], ['visits', data.visits]]) {
+        const cur = new Map((await getAll(store)).map((x) => [x.id, x]));
+        for (const it of (list || [])) { const l = cur.get(it.id); if (!l || (it.updatedAt || 0) > (l.updatedAt || 0)) { await put(store, it); n++; } }
+      }
+      await loadAll(); renderAll(); toast(n + '件 取り込みました');
+    } catch (err) { toast('取り込めませんでした'); }
+  });
+
+  // ---------- visualViewport（キーボード対策：CLAUDE.md「iPhoneの定石」） ----------
+  function setupViewportTracking() {
+    const vv = window.visualViewport; if (!vv) return;
+    const root = document.documentElement; let baseH = vv.height, lastH = -1, lastT = -1, lastKb = -1;
+    function apply() {
+      const h = Math.round(vv.height), t = Math.max(0, Math.round(vv.offsetTop));
+      if (h !== lastH) { root.style.setProperty('--app-height', h + 'px'); lastH = h; }
+      if (t !== lastT) { root.style.setProperty('--app-top', t + 'px'); lastT = t; }
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      if (kb !== lastKb) { root.style.setProperty('--kb', kb + 'px'); root.style.setProperty('--kb-safe', kb > 40 ? '0px' : 'var(--safe-bottom)'); lastKb = kb; }
+      document.body.classList.toggle('keyboard-open', h < baseH - 120);
+    }
+    let until = 0, looping = false;
+    function follow(ms) {
+      until = Math.max(until, performance.now() + ms);
+      if (looping) return; looping = true;
+      const tick = () => { apply(); const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName); if (typing || performance.now() < until) requestAnimationFrame(tick); else looping = false; };
+      requestAnimationFrame(tick);
+    }
+    vv.addEventListener('resize', () => follow(600)); vv.addEventListener('scroll', () => follow(600));
+    document.addEventListener('focusin', (e) => {
+      follow(1200);
+      const el = e.target;
+      if (el && el.closest && el.closest('#sheet') && el.type !== 'date') [350, 700].forEach((ms) => setTimeout(() => { if (document.activeElement === el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, ms));
+    });
+    document.addEventListener('focusout', () => follow(1200));
+    window.addEventListener('orientationchange', () => setTimeout(() => { baseH = vv.height; follow(600); }, 300));
+    apply();
+  }
+  // 日本語変換の確定Enterで送信しない（入力欄では Enter を無視するだけ）
+  document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT' && (e.isComposing || e.keyCode === 229)) e.preventDefault(); });
+
+  // ---------- 起動 ----------
+  (async function init() {
+    setupViewportTracking();
+    await openDB(); await loadAll(); renderAll(); switchTab('homeView');
+    // 日付が変わったら描き直す
+    let last = todayStr();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && todayStr() !== last) { last = todayStr(); renderAll(); } });
+  })();
+
+  // ---------- Service Worker + 自動アップデート ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const res = await fetch(new URL('sw.js', location.href).href, { method: 'HEAD' }); if (!res.ok) return;
+        const reg = await navigator.serviceWorker.register('sw.js');
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+        reg.addEventListener('updatefound', () => { const sw = reg.installing; if (!sw) return; sw.addEventListener('statechange', () => { if (sw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(sw); }); });
+        reg.update();
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing) return; refreshing = true; window.location.reload(); });
+      } catch (e) {}
+    });
+  }
+  function showUpdateBanner(waitingSW) {
+    if (document.getElementById('updateBanner')) return;
+    const b = document.createElement('button'); b.id = 'updateBanner';
+    b.innerHTML = '<span>新しいバージョンがあります — タップで更新</span>';
+    b.addEventListener('click', () => { b.disabled = true; b.querySelector('span').textContent = '更新中…'; waitingSW.postMessage('SKIP_WAITING'); });
+    document.body.appendChild(b); requestAnimationFrame(() => b.classList.add('show'));
+  }
+</script>
+</body>
+</html>
