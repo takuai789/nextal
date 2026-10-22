@@ -173,7 +173,7 @@
 <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
 
 <script>
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.0.1';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -233,8 +233,9 @@
   const bandLabel = (p) => {
     const b = band(p);
     if (p.unit === 'd' || b.hi < 28) return `${b.lo}〜${b.hi}日`;
-    if (p.unit === 'w') return `${half(b.lo / 7)}〜${half(b.hi / 7)}週`;
-    return `${half(b.lo / 30)}〜${half(b.hi / 30)}か月`;
+    if (p.unit === 'w' && half(b.lo / 7) !== half(b.hi / 7)) return `${half(b.lo / 7)}〜${half(b.hi / 7)}週`;
+    if (p.unit === 'm' && half(b.lo / 30) !== half(b.hi / 30)) return `${half(b.lo / 30)}〜${half(b.hi / 30)}か月`;
+    return `${b.lo}〜${b.hi}日`;
   };
   // ある日付に予定を入れたときの評価
   function judgeGap(p, gap) {
@@ -247,7 +248,8 @@
   // 場所ごとのいまの状態
   function status(p, today = todayStr()) {
     const vs = visitsOf(p.id);
-    const past = vs.filter((v) => v.date <= today), fut = vs.filter((v) => v.date > today);
+    // 今日の予約は「次の予約（今日）」として扱い、明日から「行った」になる
+    const past = vs.filter((v) => v.date < today), fut = vs.filter((v) => v.date >= today);
     const last = past.length ? past[past.length - 1].date : null;
     const next = fut.length ? fut[0].date : null;
     const b = band(p);
@@ -295,7 +297,7 @@
     const have = ss.filter((s) => s.next).sort((a, b) => a.until - b.until);
     const card = (s) => `<div class="pl" data-place="${s.p.id}">
       <div class="pl-top"><span class="dot" style="background:${s.p.color}"></span><span class="pl-n">${esc(s.p.name)}</span><span class="badge b-${s.lv}">${s.label}</span></div>
-      ${s.next ? `<div class="pl-l">次は<b>${mdw(s.next)}</b><span>${s.until === 0 ? '今日' : `あと${s.until}日`}</span></div>`
+      ${s.next ? `<div class="pl-l">${s.until === 0 ? '今日は' : '次は'}<b>${mdw(s.next)}</b><span>${s.until === 0 ? '予約の日' : `あと${s.until}日`}</span></div>`
         : s.last ? `<div class="pl-l">前回から<b>${fmtGap(s.since)}</b><span>／目安 ${everyLabel(s.p)}</span></div>` : ''}
       ${s.next ? '' : gaugeHTML(s)}
       <div class="fb fb-${s.lv}">${esc(s.msg)}</div></div>`;
@@ -326,14 +328,14 @@
     for (const v of state.visits) (byDate[v.date] = byDate[v.date] || []).push(v);
     for (let d = 1; d <= days; d++) {
       const s = `${y}-${pad(m)}-${pad(d)}`, w = parse(s).getDay();
-      const evs = (byDate[s] || []).map((v) => { const p = placeById(v.placeId); return p ? `<span class="ev${s > today ? ' plan' : ''}" style="background:${p.color};border-color:${p.color}"></span>` : ''; }).join('');
+      const evs = (byDate[s] || []).map((v) => { const p = placeById(v.placeId); return p ? `<span class="ev${s >= today ? ' plan' : ''}" style="background:${p.color};border-color:${p.color}"></span>` : ''; }).join('');
       cells += `<button class="cd${w === 0 || w === 6 ? ' we' : ''}${s < today ? ' past' : ''}${s === today ? ' today' : ''}" data-day="${s}">${d}${evs ? `<span class="evs">${evs}</span>` : ''}</button>`;
     }
     const monthVisits = state.visits.filter((v) => v.date.slice(0, 7) === state.calMonth && placeById(v.placeId)).sort((a, b) => a.date < b.date ? -1 : 1);
     const rows = monthVisits.map((v) => {
       const p = placeById(v.placeId), prev = visitsOf(p.id).filter((x) => x.date < v.date).pop();
       const g = prev ? `前回から${fmtGap(daysBetween(prev.date, v.date))}` : 'はじめて';
-      return `<div class="it" data-day="${v.date}"><span class="dot" style="background:${p.color}"></span><span class="d">${mdw(v.date)}</span><span class="nm">${esc(p.name)}</span><span class="g${v.date > today ? ' plan' : ''}">${v.date > today ? '予定' : '行った'}・${g}</span></div>`;
+      return `<div class="it" data-day="${v.date}"><span class="dot" style="background:${p.color}"></span><span class="d">${mdw(v.date)}</span><span class="nm">${esc(p.name)}</span><span class="g${v.date >= today ? ' plan' : ''}">${v.date >= today ? '予定' : '行った'}・${g}</span></div>`;
     }).join('');
     el.innerHTML = `<div class="calc">
       <div class="cal-h"><button data-cal="-1" aria-label="前の月">‹</button><b>${y}年${m}月</b><button data-cal="1" aria-label="次の月">›</button></div>
@@ -424,7 +426,7 @@
     if (!d) d = addDays(todayStr(), 7);
     const dayList = state.visits.filter((v) => v.date === d && placeById(v.placeId));
     openSheet(`<h2 id="adTitle">${dayList.length ? mdw(d) : '予定を入れる'}</h2>
-      ${dayList.map((v) => { const p = placeById(v.placeId); return `<div class="day-ev"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="s">${v.date > todayStr() ? '予定' : '行った'}${v.src === 'cal' ? '・カレンダーから' : ''}</span><button data-delv="${v.id}">消す</button></div>`; }).join('')}
+      ${dayList.map((v) => { const p = placeById(v.placeId); return `<div class="day-ev"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="s">${v.date >= todayStr() ? '予定' : '行った'}${v.src === 'cal' ? '・カレンダーから' : ''}</span><button data-delv="${v.id}">消す</button></div>`; }).join('')}
       <div class="lbl">${dayList.length ? '別の予定を足す' : 'どこ？'}</div>
       <div class="chips" id="adPlace">${state.places.map((p) => `<button class="chip${p.id === pid ? ' on' : ''}" data-p="${p.id}"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</button>`).join('')}</div>
       <div class="lbl">いつ？</div>
@@ -434,9 +436,9 @@
     const sh = $('#sheet');
     const live = () => {
       const box = $('#adLive'); const dd = $('#adDate').value;
-      if (!dayList.length) $('#adTitle').textContent = dd ? (dd <= todayStr() ? '行った日を入れる' : '予定を入れる') : '予定を入れる';
+      if (!dayList.length) $('#adTitle').textContent = dd ? (dd < todayStr() ? '行った日を入れる' : '予定を入れる') : '予定を入れる';
       $('#adSave').disabled = !(pid && dd);
-      $('#adSave').textContent = dd && dd <= todayStr() ? '行ったことにする' : '予定に入れる';
+      $('#adSave').textContent = dd && dd < todayStr() ? '行ったことにする' : '予定に入れる';
       if (!pid || !dd) { box.innerHTML = '<div class="t">場所を選ぶと、前回からの間隔が出ます</div>'; return; }
       const p = placeById(pid);
       const prev = visitsOf(pid).filter((v) => v.date < dd).pop();
@@ -462,7 +464,7 @@
     $$('[data-delv]', sh).forEach((b) => b.addEventListener('click', async () => {
       const v = state.visits.find((x) => x.id === b.dataset.delv); if (!v) return;
       // カレンダーから来たものは「消した」印を残し、次の取り込みで戻ってこないようにする
-      await put('visits', Object.assign({}, v, { deleted: true, updatedAt: Date.now() }));
+      await put('visits', Object.assign({}, v, { deleted: true, goneByImport: false, updatedAt: Date.now() }));
       await loadAll(); closeSheet(); renderAll();
       toast('消しました', '取り消す', async () => { await put('visits', Object.assign({}, v, { deleted: false, updatedAt: Date.now() })); await loadAll(); renderAll(); });
     }));
@@ -502,13 +504,17 @@
     for (const [k, f] of found) {
       const e = existing.get(k);
       if (!e) { await put('visits', { id: uid(), placeId: f.placeId, date: f.date, src: 'cal', updatedAt: Date.now() }); added++; }
+      // 取り込みで消えた予約がカレンダーに戻ってきたら、戻す（手で消したものは戻さない）
+      else if (e.deleted && e.goneByImport) { await put('visits', Object.assign({}, e, { deleted: false, goneByImport: false, updatedAt: Date.now() })); added++; }
       // 手で消したもの（deleted）はそのまま。手で入れたものは「カレンダーにもある」に切り替える
       else if (!e.deleted && e.src !== 'cal') await put('visits', Object.assign({}, e, { src: 'cal', updatedAt: Date.now() }));
     }
+    // 1件も一致しなかったときは、コピーした内容が違う可能性が高いので何も消さない
+    if (!found.size) { toast('登録した場所に一致する予定がありませんでした。「探す言葉」とコピーした内容を確かめてください'); return; }
     // 取り込んだ範囲の中で、カレンダーから来たのにもう無いもの（予約を消した・日付を変えた）は消す
     for (const v of all) {
       if (v.deleted || v.src !== 'cal' || v.date < from || v.date > to) continue;
-      if (!found.has(key(v))) { await put('visits', Object.assign({}, v, { deleted: true, updatedAt: Date.now() })); removed++; }
+      if (!found.has(key(v))) { await put('visits', Object.assign({}, v, { deleted: true, goneByImport: true, updatedAt: Date.now() })); removed++; }
     }
     try { localStorage.setItem('nextal.lastImportAt', String(Date.now())); } catch (e) {}
     await loadAll(); renderAll();
