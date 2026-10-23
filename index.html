@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="NEXTAL" />
 <meta name="theme-color" content="#F2F4F8" />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -66,6 +66,8 @@
   .gauge .pin.ghost { width: 9px; margin-left: -4.5px; background: #fff; border: 2.5px solid var(--ink); box-shadow: none; }
   .g-lbl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--tertiary); margin-top: 4px; }
   .empty { text-align: center; padding: 40px 20px 10px; color: var(--secondary); font-size: 14px; line-height: 1.8; }
+  .add-place { display: block; width: 100%; margin-top: 14px; border: 1.5px dashed var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 14px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .add-place:active { opacity: .6; }
   .presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
   .presets button { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
   .import-bar { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 10px 12px; margin-top: 6px; box-shadow: var(--shadow); font-size: 13px; color: var(--secondary); }
@@ -173,7 +175,7 @@
 <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
 
 <script>
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.2.0';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -279,17 +281,11 @@
   }
 
   // ---------- 一覧 ----------
-  const PRESETS = [
-    { name: '美容院', keyword: '美容院', every: 6, unit: 'w' },
-    { name: '整骨院', keyword: '整骨院', every: 2, unit: 'w' },
-    { name: '眼科', keyword: '眼科', every: 3, unit: 'm' },
-    { name: '通院A', keyword: '', every: 4, unit: 'w' },
-  ];
   function renderHome() {
     const el = $('#homeView');
     if (!state.places.length) {
-      el.innerHTML = `<div class="empty">通っている場所を登録しましょう。<br>押すとすぐ追加できます（あとで名前も間隔も変えられます）。
-        <div class="presets">${PRESETS.map((p, i) => `<button data-preset="${i}">＋ ${p.name}（${p.every}${UNIT_LABEL[p.unit]}ごと）</button>`).join('')}<button data-preset="new">＋ ほかの場所</button></div></div>`;
+      el.innerHTML = `<div class="empty">通っている場所（美容院・整骨院・病院など）を登録しましょう。<br>あとで名前も間隔も変えられます。</div>
+        <button class="add-place" data-preset="new">＋ 通う場所を追加</button>`;
       return;
     }
     const ss = state.places.map((p) => status(p));
@@ -305,9 +301,7 @@
     if (need.length) html += `<div class="sec">予約が入っていないもの</div>` + need.map(card).join('');
     if (have.length) html += `<div class="sec">予約が入っているもの</div>` + have.map(card).join('');
     html += `<div class="import-bar"><span>${importedText()}</span><button data-import>カレンダーから取り込む</button></div>`;
-    // まだ足していない定番の場所（最初の数個を登録するまで出す）
-    const rest = PRESETS.map((p, i) => [p, i]).filter(([p]) => !state.places.some((x) => x.name === p.name));
-    if (rest.length && state.places.length < 4) html += `<div class="presets" style="justify-content:flex-start;margin-top:16px">${rest.map(([p, i]) => `<button data-preset="${i}">＋ ${p.name}</button>`).join('')}<button data-preset="new">＋ ほかの場所</button></div>`;
+    html += `<button class="add-place" data-preset="new">＋ 通う場所を追加</button>`;
     el.innerHTML = html;
   }
   function importedText() {
@@ -549,7 +543,7 @@
   document.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-preset],[data-place],[data-day],[data-cal],[data-edit],[data-import],[data-paste],#exportBtn,#importBtn');
     if (!t || t.closest('#sheet')) return;
-    if (t.dataset.preset) { if (t.dataset.preset === 'new') return openPlaceSheet(null); const pr = PRESETS[+t.dataset.preset]; return openPlaceSheet(null, pr); }
+    if (t.dataset.preset) return openPlaceSheet(null);
     if (t.dataset.place) return openAddSheet(null, t.dataset.place);
     if (t.dataset.day) return openAddSheet(t.dataset.day);
     if (t.dataset.cal) { const [y, m] = state.calMonth.split('-').map(Number); const d = new Date(y, m - 1 + Number(t.dataset.cal), 1); state.calMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; return renderCal(); }
@@ -624,16 +618,8 @@
   function setupViewportTracking() {
     const vv = window.visualViewport; if (!vv) return;
     const root = document.documentElement; let baseH = vv.height, lastH = -1, lastT = -1, lastKb = -1;
-    // ホーム画面から開いた直後、iPhoneが見える高さをステータスバーぶん小さく報告することがあり、下に空白ができる。
-    // 入力中でなければ、画面いっぱい（ホーム画面アプリなら画面の高さ）に広げる
-    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     function apply() {
-      let h = Math.round(vv.height); const t = Math.max(0, Math.round(vv.offsetTop));
-      const a = document.activeElement, typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'date';
-      if (!typing && t === 0) {
-        const full = standalone ? (window.innerWidth > window.innerHeight ? screen.width : screen.height) : 0;
-        h = Math.max(h, Math.round(window.innerHeight), full);
-      }
+      const h = Math.round(vv.height), t = Math.max(0, Math.round(vv.offsetTop));
       if (h !== lastH) { root.style.setProperty('--app-height', h + 'px'); lastH = h; }
       if (t !== lastT) { root.style.setProperty('--app-top', t + 'px'); lastT = t; }
       const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
