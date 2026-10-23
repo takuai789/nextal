@@ -173,7 +173,7 @@
 <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
 
 <script>
-  const APP_VERSION = '1.0.1';
+  const APP_VERSION = '1.1.0';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -624,8 +624,16 @@
   function setupViewportTracking() {
     const vv = window.visualViewport; if (!vv) return;
     const root = document.documentElement; let baseH = vv.height, lastH = -1, lastT = -1, lastKb = -1;
+    // ホーム画面から開いた直後、iPhoneが見える高さをステータスバーぶん小さく報告することがあり、下に空白ができる。
+    // 入力中でなければ、画面いっぱい（ホーム画面アプリなら画面の高さ）に広げる
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
     function apply() {
-      const h = Math.round(vv.height), t = Math.max(0, Math.round(vv.offsetTop));
+      let h = Math.round(vv.height); const t = Math.max(0, Math.round(vv.offsetTop));
+      const a = document.activeElement, typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'date';
+      if (!typing && t === 0) {
+        const full = standalone ? (window.innerWidth > window.innerHeight ? screen.width : screen.height) : 0;
+        h = Math.max(h, Math.round(window.innerHeight), full);
+      }
       if (h !== lastH) { root.style.setProperty('--app-height', h + 'px'); lastH = h; }
       if (t !== lastT) { root.style.setProperty('--app-top', t + 'px'); lastT = t; }
       const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
