@@ -175,7 +175,7 @@
 <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
 
 <script>
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.3.0';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -349,11 +349,11 @@
         <div class="row btn" data-edit="new">＋ 場所を追加</div></div>
       <div class="sec">Googleカレンダーから取り込む</div>
       <div class="list"><div class="row btn" data-import>クリップボードから取り込む</div><div class="row btn" data-paste>貼り付けて取り込む（うまくいかないとき）</div></div>
-      <div class="note">iPhoneのショートカットで予定をコピーしてから押します。タイトルに「探す言葉」が入っている予定だけを取り込み、日付が過ぎたものは「行った」、これからのものは「予定」になります。何度取り込んでも二重になりません。</div>
+      <div class="note">iPhoneのショートカットで予定をコピーしてから押します。関係ない予定が混ざっていても、「探す言葉」に合うものだけを拾います。タイトルに「探す言葉」が入っている予定だけを取り込み、日付が過ぎたものは「行った」、これからのものは「予定」になります。何度取り込んでも二重になりません。</div>
       <div class="sec">ショートカットの作り方（最初に1回だけ）</div>
       <div class="list"><ol class="steps">
         <li>「ショートカット」アプリで右上の＋を押し、名前を <code>NEXTALに送る</code> にする</li>
-        <li>「カレンダーの予定を検索」を追加。「フィルタを追加」を2回押して <code>開始日 が 過去 365 日</code> と <code>開始日 が 今後 365 日</code> にし、上の「すべて」を「<b>いずれか</b>」に変える（制限はオフ）</li>
+        <li>「カレンダーの予定を検索」を追加。<b>フィルタは付けない</b>（日付のフィルタはうまく効かないことがあります）。「並び順」を <code>開始日</code> の <code>新しい順</code>、「制限」をオンにして <code>1000</code> 件にする</li>
         <li>「繰り返す（各項目）」を追加し、中に「テキスト」を置く。テキストは <code>繰り返し項目の開始日</code>（日付の形式をカスタムで <code>yyyy-MM-dd</code>）、半角スペース、<code>繰り返し項目のタイトル</code></li>
         <li>繰り返しの下に「テキストを結合」（区切り：改行）、その下に「クリップボードにコピー」</li>
         <li>最後に「通知を表示」で <code>NEXTALを開いて取り込んでください</code> と出すと便利</li>
