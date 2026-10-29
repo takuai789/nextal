@@ -167,6 +167,7 @@
   #updateBanner { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 70px); z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: 0; border-radius: 14px; padding: 14px 18px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 28px rgba(0,0,0,.2); cursor: pointer; transform: translateY(200%); transition: transform .35s cubic-bezier(.32,.72,0,1); }
   #updateBanner.show { transform: translateY(0); }
 </style>
+<script>/* iPhoneが容量不足のときに保存データを消さないよう、端末にお願いしておく */try{navigator.storage&&navigator.storage.persist&&navigator.storage.persisted().then(function(p){if(!p)navigator.storage.persist();});}catch(e){}</script>
 </head>
 <body>
 <div id="app">
@@ -186,7 +187,7 @@
 <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
 
 <script>
-  const APP_VERSION = '1.4.0';
+  const APP_VERSION = '1.5.0';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -705,6 +706,29 @@
     b.addEventListener('click', () => { b.disabled = true; b.querySelector('span').textContent = '更新中…'; waitingSW.postMessage('SKIP_WAITING'); });
     document.body.appendChild(b); requestAnimationFrame(() => b.classList.add('show'));
   }
+</script>
+<script>
+/* バックアップのお知らせ：前回から30日たったら、画面の上にそっと出す（×で7日おやすみ） */
+(function () {
+  var KEYS = ["nextal.lastBackupAt"], OWN = "nextal.bkNudge", DAY = 86400000;
+  function num(k) { try { var v = localStorage.getItem(k); if (!v) return 0; var n = Number(v); if (n) return n; var o = JSON.parse(v); return (o && (o.at || o.lastAt)) || 0; } catch (e) { return 0; } }
+  function last() { var m = 0; KEYS.concat([OWN]).forEach(function (k) { m = Math.max(m, num(k)); }); return m; }
+  window.bkNudgeMark = function () { try { localStorage.setItem(OWN, String(Date.now())); } catch (e) {} var el = document.getElementById('bk-nudge'); if (el) el.remove(); };
+  function show() {
+    var now = Date.now(), first = num(OWN + '.first'), snooze = num(OWN + '.snooze');
+    if (!first) { try { localStorage.setItem(OWN + '.first', String(now)); } catch (e) {} first = now; }
+    if (snooze && now < snooze) return;
+    var t = last(), days = Math.floor((now - (t || first)) / DAY);
+    if (days < 30) return;
+    var el = document.createElement('div'); el.id = 'bk-nudge';
+    el.setAttribute('style', 'position:fixed;left:12px;right:12px;margin:0 auto;width:fit-content;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:8000;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px);padding:8px 8px 8px 14px;border-radius:999px;background:rgba(28,28,30,.92);color:#fff;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)');
+    var msg = t ? ('前回のバックアップから' + days + '日。設定から書き出しておくと安心です') : 'まだバックアップがありません。設定から書き出しておくと安心です';
+    el.innerHTML = '<span>💾</span><span style="flex:1">' + msg + '</span><button type="button" aria-label="閉じる" style="flex:none;width:26px;height:26px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:14px;line-height:1;cursor:pointer">×</button>';
+    el.querySelector('button').onclick = function () { try { localStorage.setItem(OWN + '.snooze', String(Date.now() + 7 * DAY)); } catch (e) {} el.remove(); };
+    document.body.appendChild(el);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(show, 1200); }); else setTimeout(show, 1200);
+})();
 </script>
 </body>
 </html>
